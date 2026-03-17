@@ -16,7 +16,8 @@
       "description": "Select a REPORTING API environment",
       "options": [
         "staging",
-        "production"
+        "production",
+        "local"
       ],
       "default": "production"
     },
@@ -27,11 +28,12 @@
       "type": "debugpy",
       "request": "launch",
       "program": "${file}",
+      "args": ["${input:environment}"],
       "env": {
+        "ENVIRONMENT": "${input:environment}",
         "PYTHONPATH": "${workspaceFolder}"
       },
       "console": "integratedTerminal",
-      "args": "${command:pickArgs}"
     },
     {
       "name": "🚀 Python: Run/Debug Current File (with .env)",
@@ -40,7 +42,9 @@
       "program": "${file}",
       "cwd": "${workspaceFolder}",
       "envFile": "${workspaceFolder}/.env",
+      "args": ["${input:environment}"],
       "env": {
+        "ENVIRONMENT": "${input:environment}",
         "PYTHONPATH": "${workspaceFolder}"
       },
       "console": "integratedTerminal",

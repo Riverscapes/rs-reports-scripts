@@ -31,6 +31,7 @@ dependencies = [
   "riverscapes-metadata @ git+https://github.com/Riverscapes/RiverscapesXML.git@master#subdirectory=riverscapes_metadata",
   "pandas>=2.3.3",
   "tqdm>=4.67.1",
+  "questionary>=2.1.1",
 ]
 
 [project.optional-dependencies]
@@ -63,3 +64,8 @@ select = ["I", "E", "F", "PL", "N"]
 # Tells Ruff exactly which imports are "local" to your project
 known-first-party = ["pyreports"]
 combine-as-imports = true
+
+[dependency-groups]
+dev = [
+    "pylint>=4.0.5",
+]

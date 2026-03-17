@@ -1,3 +1,36 @@
+"""ReportsAPI — Python client for the Riverscapes Reports GraphQL API.
+
+This module provides ``ReportsAPI``, a high-level wrapper that handles
+authentication, query execution, and response parsing.  All communication
+with the backend happens over a single GraphQL endpoint; this module hides
+that complexity behind ordinary Python method calls.
+
+Typical usage::
+
+    from pyreports import ReportsAPI
+
+    with ReportsAPI(stage='production') as api:
+        report_types = api.list_report_types()
+        report = api.create_report(
+            name='My Report',
+            report_type_id=report_types[0].id,
+        )
+        report = api.start_report(report.id)
+        report = api.poll_report(report.id)
+        print(report.status)  # 'COMPLETE'
+
+Authentication modes
+--------------------
+Interactive (browser)
+    The default mode.  Opens a browser tab for the user to log in via
+    Auth0 PKCE flow.  The resulting access token is cached and
+    automatically renewed in a background thread before it expires.
+
+Machine credentials
+    Pass ``machine_auth={'clientId': ..., 'secretId': ...}`` for headless
+    environments (CI, server scripts).  Credentials are exchanged for a
+    short-lived access token via the OAuth 2.0 client-credentials flow.
+"""
 import os
 import time
 import json
@@ -30,11 +63,18 @@ LOGIN_SCOPE = 'openid'
 
 AUTH_DETAILS = {
     "domain": "auth.riverscapes.net",
-    "clientId": "N1IQ2WzCnzQTFFJapXoVRNcJbyBMUOoJ",
+    "clientId": "Vhse6GZoU6vlJ9fcbrdmAAK6b4J9sjtT",
 }
 
 
 class ReportsAPIException(Exception):
+    """Raised when the Reports API returns an error or an unexpected HTTP status.
+
+    The ``message`` attribute contains a human-readable description that
+    includes any GraphQL ``errors`` array returned by the server, making it
+    easy to surface the root cause to the user.
+    """
+
     def __init__(self, message="ReportsAPI encountered an error"):
         self.message = message
         super().__init__(self.message)
@@ -43,17 +83,33 @@ class ReportsAPIException(Exception):
 class ReportsAPI:
     """Client for the Riverscapes Reports GraphQL API.
 
-    Supports both interactive browser-based auth (for personal use) and
-    machine authentication via client credentials (for automated pipelines).
+    All network communication goes through a single GraphQL endpoint.  The
+    class handles authentication, token refresh, query loading, and response
+    parsing so callers can work with plain Python objects.
 
-    Usage (interactive):
+    Always use ``ReportsAPI`` as a context manager so the background
+    token-refresh timer is cleaned up on exit::
+
         with ReportsAPI(stage='production') as api:
             reports, total = api.list_reports()
 
-    Usage (machine auth):
-        with ReportsAPI(stage='production',
-                        machine_auth={'clientId': '...', 'secretId': '...'}) as api:
-            report = api.create_report(...)
+    Parameters
+    ----------
+    stage : str
+        One of ``'production'``, ``'staging'``, or ``'local'``.  Controls
+        which API endpoint is used.  If ``None``, an interactive prompt is
+        shown (requires the ``inquirer`` package).
+    machine_auth : dict, optional
+        Supply ``{'clientId': '...', 'secretId': '...'}`` to authenticate
+        via the OAuth 2.0 client-credentials flow instead of the browser.
+    dev_headers : dict, optional
+        Raw HTTP headers injected into every request.  Useful for local
+        development where you want to bypass Auth0 entirely.
+
+    Raises
+    ------
+    ReportsAPIException
+        If ``stage`` is not a recognised value, or if authentication fails.
     """
 
     def __init__(self, stage: str = None, machine_auth: Dict[str, str] = None, dev_headers: Dict[str, str] = None):
@@ -69,6 +125,8 @@ class ReportsAPI:
             self.uri = 'https://api.reports.riverscapes.net'
         elif self.stage == 'STAGING':
             self.uri = 'https://api.reports.riverscapes.net/staging'
+        elif self.stage == 'LOCAL':
+            self.uri = 'http://localhost:7016'
         else:
             raise ReportsAPIException(f'Unknown stage: {stage!r}. Must be "production" or "staging".')
 
@@ -81,10 +139,12 @@ class ReportsAPI:
         return answers['stage'].upper()
 
     def __enter__(self) -> 'ReportsAPI':
+        """Authenticate and return self so the instance can be used in a ``with`` block."""
         self.refresh_token()
         return self
 
     def __exit__(self, _type, _value, _traceback):
+        """Cancel any background token-refresh timer and release resources."""
         self.shutdown()
 
     # -------------------------------------------------------------------------
@@ -102,11 +162,35 @@ class ReportsAPI:
         return ''.join(CHARSET[b % len(CHARSET)] for b in buffer)
 
     def shutdown(self):
+        """Cancel the background token-refresh timer.
+
+        Called automatically by ``__exit__`` when the ``with`` block ends.
+        Safe to call multiple times.
+        """
         self.log.debug("Shutting down Reports API client")
         if self.token_timeout:
             self.token_timeout.cancel()
 
     def refresh_token(self, force: bool = False):
+        """Obtain or renew the access token.
+
+        In **interactive mode** this opens a browser tab for the user to log
+        in via the Auth0 PKCE flow.  A temporary local HTTP server on
+        ``localhost:{auth_port}`` captures the authorization code that Auth0
+        redirects back to after a successful login.
+
+        In **machine-auth mode** this calls the ``/token`` endpoint with the
+        client credentials and stores the resulting bearer token.
+
+        After a successful interactive login a ``threading.Timer`` is started
+        to call this method again 20 seconds before the token expires, keeping
+        long-running scripts authenticated without user interaction.
+
+        Parameters
+        ----------
+        force : bool
+            Re-fetch the token even if one is already cached.
+        """
         self.log.info(f"Authenticating on Reports API: {self.uri}")
         if self.token_timeout:
             self.token_timeout.cancel()
@@ -140,7 +224,7 @@ class ReportsAPI:
             code_verifier = self._generate_random(128)
             code_challenge = self._generate_challenge(code_verifier)
             state = self._generate_random(32)
-            redirect_url = f"http://localhost:{self.auth_port}/rs-reports/"
+            redirect_url = f"http://localhost:{self.auth_port}/rs-reports"
             login_url = urlparse(f"https://{AUTH_DETAILS['domain']}/authorize")
             query_params = {
                 "client_id": AUTH_DETAILS["clientId"],
@@ -178,6 +262,9 @@ class ReportsAPI:
     def _wait_for_auth_code(self) -> str:
         auth_port = self.auth_port
 
+        class AuthServer(ThreadingHTTPServer):
+            auth_code: str | None = None
+
         class AuthHandler(BaseHTTPRequestHandler):
             def do_GET(self):
                 self.send_response(200)
@@ -199,7 +286,7 @@ class ReportsAPI:
             def log_message(self, format, *args):  # noqa: A002
                 pass
 
-        server = ThreadingHTTPServer(("localhost", auth_port), AuthHandler)
+        server = AuthServer(("localhost", auth_port), AuthHandler)
         try:
             print("Waiting for browser authentication (Ctrl-C to cancel)...")
             server.serve_forever()
@@ -214,10 +301,38 @@ class ReportsAPI:
     # -------------------------------------------------------------------------
 
     def load_query(self, query_name: str) -> str:
+        """Read a ``.graphql`` file from the ``graphql/queries/`` directory.
+
+        Parameters
+        ----------
+        query_name : str
+            File name without the ``.graphql`` extension, e.g. ``'listReports'``.
+
+        Returns
+        -------
+        str
+            The raw GraphQL query string ready to pass to ``run_query()``.
+        """
         path = Path(__file__).parent.parent / 'graphql' / 'queries' / f'{query_name}.graphql'
         return path.read_text(encoding='utf-8')
 
     def load_mutation(self, mutation_name: str) -> str:
+        """Read a ``.graphql`` file from the ``graphql/mutations/`` directory.
+
+        Also accepts an absolute or relative path to a ``.graphql`` file
+        outside the package for ad-hoc mutations.
+
+        Parameters
+        ----------
+        mutation_name : str
+            File name without the ``.graphql`` extension, e.g. ``'createReport'``,
+            or a full file path.
+
+        Returns
+        -------
+        str
+            The raw GraphQL mutation string ready to pass to ``run_query()``.
+        """
         candidate = Path(mutation_name)
         if candidate.exists():
             return candidate.read_text(encoding='utf-8')
@@ -225,6 +340,41 @@ class ReportsAPI:
         return path.read_text(encoding='utf-8')
 
     def run_query(self, query: str, variables: dict) -> dict:
+        """Execute a GraphQL query or mutation against the API endpoint.
+
+        Adds the ``Authorization: Bearer <token>`` header automatically.  If
+        the server responds with an authentication error the token is refreshed
+        once and the request is retried.
+
+        Under the hood every GraphQL request is a plain HTTP POST to the API
+        URL with a JSON body of ``{"query": "...", "variables": {...}}``.
+        The server always returns HTTP 200 — errors are reported inside the
+        ``errors`` key of the JSON response body, not via HTTP status codes
+        (this is standard GraphQL behaviour).
+
+        Parameters
+        ----------
+        query : str
+            A GraphQL query or mutation string, typically loaded from a
+            ``.graphql`` file via ``load_query()`` or ``load_mutation()``.
+        variables : dict
+            Variable values for the operation, matching the ``$variable``
+            placeholders declared in the query string.  Pass ``{}`` for
+            queries that have no variables.
+
+        Returns
+        -------
+        dict
+            The full deserialized JSON response, e.g.
+            ``{'data': {'report': {...}}}``.  Callers typically index into
+            ``result['data']`` to get the payload.
+
+        Raises
+        ------
+        ReportsAPIException
+            If the server returns a non-200 HTTP status, or if the GraphQL
+            ``errors`` array is non-empty.
+        """
         headers = {"authorization": "Bearer " + self.access_token} if self.access_token else {}
         if self.dev_headers:
             headers.update(self.dev_headers)
@@ -326,6 +476,15 @@ class ReportsAPI:
             report_input['extent'] = extent
         mut = self.load_mutation('createReport')
         return RSReport(self.run_query(mut, {'report': report_input})['data']['createReport'])
+
+    def attach_picker_option(self, report_id: str, picker_layer: str, picker_item_id: str) -> RSReport:
+        """Attach a picker layer item to a report."""
+        mut = self.load_mutation('attachPickerOptionToReport')
+        return RSReport(self.run_query(mut, {
+            'reportId': report_id,
+            'pickerLayer': picker_layer,
+            'pickerItemId': picker_item_id,
+        })['data']['attachPickerOptionToReport'])
 
     def start_report(self, report_id: str) -> RSReport:
         """Start a report (moves to QUEUED or RUNNING)."""

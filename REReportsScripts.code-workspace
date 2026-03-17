@@ -3,12 +3,6 @@
     {
       "name": "📦 pyreports",
       "path": "."
-    },
-    {
-      "path": "../data-exchange-scripts"
-    },
-    {
-      "path": "../rs-reports-monorepo"
     }
   ],
   "settings": {
@@ -20,6 +14,8 @@
     "autopep8.args": [
       "--max-line-length=240",
     ],
+    "python.defaultInterpreterPath": "${workspaceFolder:📦 pyreports}/.venv/bin/python",
+    "pylint.importStrategy": "fromEnvironment",
     "pylint.args": [
       "--disable=C0301,C0114,C0103,W0719,W0718",
       "--max-line-length=240"

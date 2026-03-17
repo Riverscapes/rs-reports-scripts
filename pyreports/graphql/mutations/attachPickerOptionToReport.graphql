@@ -1,0 +1,7 @@
+mutation attachPickerOptionToReport($reportId: ID!, $pickerLayer: ID!, $pickerItemId: ID!) {
+  attachPickerOptionToReport(reportId: $reportId, pickerLayer: $pickerLayer, pickerItemId: $pickerItemId) {
+    id
+    name
+    status
+  }
+}
