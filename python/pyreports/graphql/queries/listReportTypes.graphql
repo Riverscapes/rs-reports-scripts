@@ -1,0 +1,16 @@
+query listReportTypes {
+  reportTypes {
+    total
+    limit
+    offset
+    items {
+      id
+      name
+      shortName
+      description
+      subHeader
+      version
+      parameters
+    }
+  }
+}

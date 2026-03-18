@@ -1,0 +1,23 @@
+mutation createReport($report: RSReportInput!) {
+  createReport(report: $report) {
+    id
+    name
+    description
+    status
+    statusMessage
+    progress
+    parameters
+    createdAt
+    updatedAt
+    createdBy {
+      id
+      name
+    }
+    reportType {
+      id
+      name
+      shortName
+      version
+    }
+  }
+}

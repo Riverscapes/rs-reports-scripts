@@ -4,6 +4,10 @@ inputs
 logs
 data
 
+# Node.js
+node_modules/
+dist/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

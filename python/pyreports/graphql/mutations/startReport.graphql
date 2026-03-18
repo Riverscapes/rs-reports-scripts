@@ -1,0 +1,10 @@
+mutation startReport($reportId: ID!) {
+  startReport(reportId: $reportId) {
+    id
+    name
+    status
+    statusMessage
+    progress
+    updatedAt
+  }
+}

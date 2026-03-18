@@ -1,7 +1,9 @@
 # Riverscapes Reports Scripts
 
-Python client scripts for creating, managing, and monitoring reports via the
+Client libraries for creating, managing, and monitoring reports via the
 [Riverscapes Reports GraphQL API](https://api.reports.riverscapes.net).
+
+Available in **Python** and **TypeScript/JavaScript**.
 
 ---
 
@@ -9,8 +11,8 @@ Python client scripts for creating, managing, and monitoring reports via the
 
 1. [What is this project?](#what-is-this-project)
 2. [Prerequisites](#prerequisites)
-3. [Installation](#installation)
-4. [Quick Start](#quick-start)
+3. [Python — Installation & Quick Start](#python--installation--quick-start)
+4. [TypeScript — Installation & Quick Start](#typescript--installation--quick-start)
 5. [Authentication](#authentication)
 6. [GraphQL Primer](#graphql-primer)
 7. [Project Layout](#project-layout)
@@ -27,16 +29,20 @@ and watershed science. This repository gives you:
 
 | Component | Purpose |
 |---|---|
-| `pyreports/` | Installable Python package wrapping the Reports GraphQL API |
-| `scripts/create_report.py` | Interactive command-line tool to create and run a report end-to-end |
+| `python/pyreports/` | Installable Python package wrapping the Reports GraphQL API |
+| `python/scripts/create_report.py` | Interactive Python CLI to create and run a report end-to-end |
+| `typescript/src/` | TypeScript/JavaScript package wrapping the Reports GraphQL API |
+| `typescript/scripts/createReport.ts` | Interactive TypeScript CLI to create and run a report end-to-end |
 
 You interact with the platform entirely through a **GraphQL API** — no manual
-HTTP wrangling required. The `ReportsAPI` class takes care of authentication,
+HTTP wrangling required. The client classes take care of authentication,
 query execution, and error handling so your scripts can focus on business logic.
 
 ---
 
 ## Prerequisites
+
+### Python
 
 | Requirement | Version | Notes |
 |---|---|---|
@@ -44,20 +50,28 @@ query execution, and error handling so your scripts can focus on business logic.
 | [uv](https://docs.astral.sh/uv/) | latest | Required package manager |
 | Internet access | — | Required for API calls and browser login |
 
-> **No GraphQL experience required.** The `ReportsAPI` class wraps every
-> query and mutation so you call ordinary Python methods. See the
+### TypeScript
+
+| Requirement | Version | Notes |
+|---|---|---|
+| Node.js | ≥ 18 | Use `node --version` to check |
+| npm | ≥ 9 | Bundled with Node.js |
+| Internet access | — | Required for API calls and browser login |
+
+> **No GraphQL experience required.** The client classes wrap every
+> query and mutation so you call ordinary methods. See the
 > [GraphQL Primer](#graphql-primer) section if you want to understand what
 > is happening under the hood.
 
 ---
 
-## Installation
+## Python — Installation & Quick Start
 
 ### 1. Clone the repository
 
 ```bash
 git clone https://github.com/Riverscapes/rs-reports-scripts.git
-cd rs-reports-scripts
+cd rs-reports-scripts/python
 ```
 
 ### 2. Install uv (if you don't have it)
@@ -75,7 +89,7 @@ uv sync
 ```
 
 `uv sync` reads `pyproject.toml`, creates a `.venv` folder, and installs
-everything in one step.  Run it again any time you pull new changes.
+everything in one step. Run it again any time you pull new changes.
 
 ### 4. Verify the install
 
@@ -83,23 +97,58 @@ everything in one step.  Run it again any time you pull new changes.
 uv run python -c "from pyreports import ReportsAPI; print('OK')"
 ```
 
----
-
-## Quick Start
-
-Run the interactive report-creation script against the **staging** environment:
+### 5. Run the interactive report-creation script
 
 ```bash
 uv run python scripts/create_report.py staging
 ```
 
-The script will:
+Use `production` instead of `staging` to target the live platform.
 
-1. Open a browser tab for you to log in with your Riverscapes account.
-2. Present an interactive menu to select a report type.
-3. Prompt for a report name, picker layer, and unit system.
-4. Create the report, attach inputs, start it, and poll until it finishes.
-5. Print a direct link to the finished report.
+---
+
+## TypeScript — Installation & Quick Start
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Riverscapes/rs-reports-scripts.git
+cd rs-reports-scripts/typescript
+```
+
+### 2. Install dependencies
+
+```bash
+npm install
+```
+
+### 3. Build the library
+
+```bash
+npm run build
+```
+
+### 4. Format code (optional)
+
+The TypeScript code follows the same formatting conventions as the
+[rs-web-monorepo](https://github.com/Riverscapes/rs-web-monorepo): no
+semicolons, single quotes, trailing commas (es5), 120-char line width.
+
+```bash
+npm run format
+```
+
+### 5. Run the interactive report-creation script
+
+```bash
+npx tsx scripts/createReport.ts staging
+```
+
+Or using the package.json script:
+
+```bash
+npm run create-report -- staging
+```
 
 Use `production` instead of `staging` to target the live platform.
 
@@ -107,21 +156,32 @@ Use `production` instead of `staging` to target the live platform.
 
 ## Authentication
 
-The `ReportsAPI` class supports two authentication modes.
+Both the Python and TypeScript clients support two authentication modes.
 
 ### Interactive (browser) login — for personal use
 
-When you use `ReportsAPI` without providing `machine_auth`, it starts a
-temporary local web server, opens your browser to the Riverscapes Auth0 login
-page, and captures the authorization code automatically via the OAuth 2.0
-PKCE flow.
+Opens a browser tab for you to log in via the Auth0 PKCE flow.
+The access token is refreshed automatically in the background.
 
+**Python:**
 ```python
 with ReportsAPI(stage='production') as api:
-    # You will be prompted to log in via the browser once.
-    # The access token is refreshed automatically in the background.
     profile = api.get_profile()
     print(profile['name'])
+```
+
+**TypeScript:**
+```typescript
+import { ReportsAPI } from 'rs-reports'
+
+const api = new ReportsAPI({ stage: 'production' })
+await api.open()
+try {
+  const profile = await api.getProfile()
+  console.log(profile.name)
+} finally {
+  api.close()
+}
 ```
 
 **Why PKCE?**  
@@ -137,9 +197,10 @@ auth server. This prevents interception attacks.
 
 ### Machine (client-credentials) auth — for automated pipelines
 
-For CI/CD or server-side scripts where no browser is available, pass a
-`machine_auth` dict with a client ID and secret issued by the Riverscapes team:
+For CI/CD or server-side scripts where no browser is available, pass
+machine credentials:
 
+**Python:**
 ```python
 with ReportsAPI(
     stage='production',
@@ -151,9 +212,22 @@ with ReportsAPI(
     report = api.create_report(name='My Report', report_type_id='...')
 ```
 
+**TypeScript:**
+```typescript
+const api = new ReportsAPI({
+  stage: 'production',
+  machineAuth: {
+    clientId: 'YOUR_CLIENT_ID',
+    secretId: 'YOUR_CLIENT_SECRET',
+  },
+})
+await api.open()
+```
+
 Keep your credentials out of source code — load them from environment
 variables or a secrets manager:
 
+**Python:**
 ```python
 import os
 
@@ -165,6 +239,17 @@ with ReportsAPI(
     }
 ) as api:
     ...
+```
+
+**TypeScript:**
+```typescript
+const api = new ReportsAPI({
+  stage: 'production',
+  machineAuth: {
+    clientId: process.env.RS_CLIENT_ID!,
+    secretId: process.env.RS_CLIENT_SECRET!,
+  },
+})
 ```
 
 ---
@@ -216,19 +301,20 @@ The server returns JSON:
 }
 ```
 
-### How does this library make it easier?
+### How do the client libraries make it easier?
 
-1. **Query files** — GraphQL strings live in `pyreports/graphql/` so they are
-   readable and reusable, not buried in Python strings.
-2. **`run_query()`** — handles setting the `Authorization` header, JSON
+1. **Query files** — GraphQL strings live in dedicated `graphql/` directories so they are
+   readable and reusable, not buried in code strings.
+2. **`run_query()` / `runQuery()`** — handles setting the `Authorization` header, JSON
    encoding, error parsing, and automatic token refresh.
-3. **Data classes** — raw dicts from the API are wrapped in `RSReport` and
+3. **Data classes** — raw dicts/objects from the API are wrapped in `RSReport` and
    `RSReportType`, giving you typed attributes (`report.status`,
-   `report.is_complete()`) instead of string indexing.
+   `report.isComplete()`) instead of string indexing.
 
 ### Exploring the schema
 
-The full schema is at `pyreports/graphql/rs-reports.schema.graphql`. You can
+The full schema is at `python/pyreports/graphql/rs-reports.schema.graphql`
+(also mirrored in `typescript/src/graphql/`). You can
 also introspect the live API with any GraphQL client (e.g.
 [Altair](https://altairgraphql.dev/), [Insomnia](https://insomnia.rest/)) by
 pointing it at the API URL and adding an `Authorization: Bearer <token>` header.
@@ -239,99 +325,120 @@ pointing it at the API URL and adding an `Authorization: Bearer <token>` header.
 
 ```
 rs-reports-scripts/
-├── pyproject.toml               # Package metadata and dependencies
-├── requirements.txt             # Pinned runtime dependencies
+├── README.md
+├── graphql.config.json
 │
-├── pyreports/                   # Installable Python package
-│   ├── __init__.py              # Public exports: ReportsAPI, RSReport, RSReportType
-│   ├── __version__.py           # Package version string
+├── python/                         # Python client
+│   ├── pyproject.toml              # Package metadata and dependencies
+│   ├── requirements.txt            # Pinned runtime dependencies
 │   │
-│   ├── classes/
-│   │   ├── ReportsAPI.py        # Main API client class
-│   │   └── reports_helpers.py   # Data classes (RSReport, RSReportType) + utils
+│   ├── pyreports/                  # Installable Python package
+│   │   ├── __init__.py             # Public exports
+│   │   ├── __version__.py          # Package version string
+│   │   │
+│   │   ├── classes/
+│   │   │   ├── ReportsAPI.py       # Main API client class
+│   │   │   └── reports_helpers.py  # Data classes + utils
+│   │   │
+│   │   └── graphql/
+│   │       ├── rs-reports.schema.graphql
+│   │       ├── queries/            # Read-only GraphQL operations
+│   │       └── mutations/          # Write GraphQL operations
 │   │
-│   └── graphql/
-│       ├── rs-reports.schema.graphql   # Full API schema (for reference / IDE support)
-│       ├── queries/             # Read-only GraphQL operations
-│       │   ├── getProfile.graphql
-│       │   ├── getReport.graphql
-│       │   ├── getReportType.graphql
-│       │   ├── listReports.graphql
-│       │   ├── listReportTypes.graphql
-│       │   ├── globalReports.graphql
-│       │   ├── uploadUrls.graphql
-│       │   └── downloadUrls.graphql
-│       └── mutations/          # Write GraphQL operations
-│           ├── createReport.graphql
-│           ├── startReport.graphql
-│           ├── stopReport.graphql
-│           ├── deleteReport.graphql
-│           └── attachPickerOptionToReport.graphql
+│   └── scripts/
+│       └── create_report.py        # Interactive Python CLI script
 │
-└── scripts/
-    └── create_report.py         # Interactive CLI script
+└── typescript/                     # TypeScript/JavaScript client
+    ├── package.json                # Package metadata and dependencies
+    ├── tsconfig.json               # TypeScript config (type-checking, VS Code)
+    ├── tsconfig.build.json         # TypeScript config (build / emit)
+    ├── .prettierrc.cjs             # Prettier formatting rules
+    │
+    ├── src/
+    │   ├── index.ts                # Public exports
+    │   ├── ReportsAPI.ts           # Main API client class
+    │   ├── reportsHelpers.ts       # Data classes + utils
+    │   │
+    │   └── graphql/
+    │       ├── rs-reports.schema.graphql
+    │       ├── queries/            # Read-only GraphQL operations
+    │       └── mutations/          # Write GraphQL operations
+    │
+    └── scripts/
+        └── createReport.ts         # Interactive TypeScript CLI script
 ```
 
 ### Key design decisions
 
-- **GraphQL files are separate** from Python code. This keeps queries readable,
+- **GraphQL files are separate** from source code. This keeps queries readable,
   allows editor syntax highlighting, and means you can copy-paste them
   directly into a GraphQL client for testing.
-- **Context manager (`with` statement)** — `ReportsAPI` implements `__enter__`
-  and `__exit__` so it authenticates on entry and cleanly cancels any
-  background token-refresh timers on exit. Always use the `with` form.
-- **`RSReport` and `RSReportType` data classes** — wrap raw API dicts and add
-  helper methods like `is_complete()`, `is_running()`, and `is_failed()`.
+- **Python uses a context manager (`with` statement)** — `ReportsAPI` implements
+  `__enter__` and `__exit__` so it authenticates on entry and cleanly cancels
+  any background token-refresh timers on exit.
+- **TypeScript uses `open()` / `close()`** — call `await api.open()` to
+  authenticate and `api.close()` to clean up. Use a `try/finally` block.
+- **`RSReport` and `RSReportType` data classes** — wrap raw API responses and add
+  helper methods like `isComplete()` / `is_complete()`, `isRunning()` / `is_running()`,
+  and `isFailed()` / `is_failed()`.
 
 ---
 
 ## API Reference
 
-### `ReportsAPI(stage, machine_auth=None, dev_headers=None)`
+### Python: `ReportsAPI(stage, machine_auth=None, dev_headers=None)`
+### TypeScript: `new ReportsAPI({ stage, machineAuth?, devHeaders? })`
 
-The main client class. Always use as a context manager:
-
-```python
-with ReportsAPI(stage='production') as api:
-    ...
-```
-
-| Parameter | Type | Description |
-|---|---|---|
-| `stage` | `str` | `'production'`, `'staging'`, or `'local'` |
-| `machine_auth` | `dict \| None` | `{'clientId': ..., 'secretId': ...}` for non-browser auth |
-| `dev_headers` | `dict \| None` | Raw headers to inject (for local development / testing) |
+| Parameter | Python Type | TypeScript Type | Description |
+|---|---|---|---|
+| `stage` | `str` | `string` | `'production'`, `'staging'`, or `'local'` |
+| `machine_auth` / `machineAuth` | `dict \| None` | `MachineAuth \| undefined` | `{clientId, secretId}` for non-browser auth |
+| `dev_headers` / `devHeaders` | `dict \| None` | `Record<string, string> \| undefined` | Raw headers for local dev |
 
 ---
 
 ### Profile
 
-#### `api.get_profile() -> dict`
+#### `get_profile()` / `getProfile()`
 
 Returns the authenticated user's profile (`id`, `name`, `email`, etc.).
 
+**Python:**
 ```python
 profile = api.get_profile()
 print(profile['name'])
+```
+
+**TypeScript:**
+```typescript
+const profile = await api.getProfile()
+console.log(profile.name)
 ```
 
 ---
 
 ### Report Types
 
-Report types define what a report does (e.g. "Watershed Summary",
-"Fish Passage Assessment"). They are managed by the Riverscapes team.
+Report types define what a report does. They are managed by the Riverscapes team.
 
-#### `api.list_report_types() -> list[RSReportType]`
+#### `list_report_types()` / `listReportTypes()`
 
 Returns all available report types.
 
+**Python:**
 ```python
 for rt in api.list_report_types():
     print(rt.id, rt.name, rt.version)
 ```
 
-#### `api.get_report_type(report_type_id: str) -> RSReportType`
+**TypeScript:**
+```typescript
+for (const rt of await api.listReportTypes()) {
+  console.log(rt.id, rt.name, rt.version)
+}
+```
+
+#### `get_report_type(id)` / `getReportType(id)`
 
 Fetch a single report type by its UUID.
 
@@ -339,31 +446,44 @@ Fetch a single report type by its UUID.
 
 ### Reports
 
-#### `api.list_reports(limit=50, offset=0) -> tuple[list[RSReport], int]`
+#### `list_reports(limit, offset)` / `listReports(limit, offset)`
 
 Returns a page of the current user's reports plus the total count.
-Use `offset` to paginate.
 
+**Python:**
 ```python
 reports, total = api.list_reports(limit=10, offset=0)
 print(f"Showing {len(reports)} of {total}")
 ```
 
-#### `api.iter_reports(page_size=50) -> Generator[RSReport]`
+**TypeScript:**
+```typescript
+const { reports, total } = await api.listReports(10, 0)
+console.log(`Showing ${reports.length} of ${total}`)
+```
+
+#### `iter_reports(page_size)` / `iterReports(pageSize)`
 
 Yields every report for the current user, handling pagination automatically.
-Prefer this over calling `list_reports` in a loop.
 
+**Python:**
 ```python
 for report in api.iter_reports():
     print(report.id, report.status)
 ```
 
-#### `api.get_report(report_id: str) -> RSReport`
+**TypeScript:**
+```typescript
+for await (const report of api.iterReports()) {
+  console.log(report.id, report.status)
+}
+```
+
+#### `get_report(report_id)` / `getReport(reportId)`
 
 Fetch a single report by its UUID.
 
-#### `api.global_reports(limit=50, offset=0) -> tuple[list[RSReport], int]`
+#### `global_reports(limit, offset)` / `globalReports(limit, offset)`
 
 Admin method — returns reports across all users.
 
@@ -373,39 +493,42 @@ Admin method — returns reports across all users.
 
 The typical lifecycle is: **create → (attach inputs) → start → poll**.
 
-#### `api.create_report(name, report_type_id, description=None, parameters=None, extent=None) -> RSReport`
+#### `create_report(...)` / `createReport(...)`
 
 Creates a new report with status `CREATED`. The report is not running yet —
 this step just registers it and returns an `id` you can use for subsequent calls.
 
+**Python:**
 ```python
 report = api.create_report(
     name='My Watershed Report',
     report_type_id='<uuid-of-report-type>',
     parameters={'units': 'imperial'},
 )
-print(report.id)   # UUID you will use for everything else
 ```
 
-#### `api.attach_picker_option(report_id, picker_layer, picker_item_id) -> RSReport`
-
-Some report types require you to select a geographic feature (a "picker item")
-before starting. This call links that selection to the report.
-
-```python
-api.attach_picker_option(report.id, 'huc', '1302020710')
+**TypeScript:**
+```typescript
+const report = await api.createReport({
+  name: 'My Watershed Report',
+  reportTypeId: '<uuid-of-report-type>',
+  parameters: { units: 'imperial' },
+})
 ```
 
-#### `api.start_report(report_id: str) -> RSReport`
+#### `attach_picker_option(...)` / `attachPickerOption(...)`
 
-Submits the report to the processing queue. After this call the status moves
-to `QUEUED` and then `RUNNING`.
+Links a geographic picker selection to the report.
 
-#### `api.stop_report(report_id: str) -> RSReport`
+#### `start_report(report_id)` / `startReport(reportId)`
+
+Submits the report to the processing queue.
+
+#### `stop_report(report_id)` / `stopReport(reportId)`
 
 Cancels a running report. Sets status to `STOPPED`.
 
-#### `api.delete_report(report_id: str) -> RSReport`
+#### `delete_report(report_id)` / `deleteReport(reportId)`
 
 Permanently deletes a report and its stored files from S3.
 
@@ -413,46 +536,48 @@ Permanently deletes a report and its stored files from S3.
 
 ### Polling
 
-#### `api.poll_report(report_id, interval=10, timeout=3600) -> RSReport`
+#### `poll_report(report_id, interval, timeout)` / `pollReport(reportId, interval, timeout)`
 
 Blocks until the report reaches a terminal state (`COMPLETE`, `ERROR`,
-`STOPPED`, or `DELETED`), then returns the final `RSReport`. Raises
-`ReportsAPIException` if `timeout` seconds elapse first.
+`STOPPED`, or `DELETED`), then returns the final report. Raises
+`ReportsAPIException` if `timeout` seconds elapse.
 
+**Python:**
 ```python
 report = api.poll_report(report.id, interval=10)
 if report.is_complete():
     print("Done!")
 ```
 
+**TypeScript:**
+```typescript
+const report = await api.pollReport(report.id!, 10)
+if (report.isComplete()) {
+  console.log('Done!')
+}
+```
+
 ---
 
 ### File Operations
 
-#### `api.upload_file(report_id, local_path, remote_path, file_type='INPUTS') -> bool`
+#### `upload_file(...)` / `uploadFile(...)`
 
 Uploads a local file to the report's S3 storage. Retries up to 3 times with
 exponential back-off.
 
-```python
-api.upload_file(report.id, '/tmp/data.csv', 'inputs/data.csv')
-```
+#### `get_upload_urls(...)` / `getUploadUrls(...)`
 
-`file_type` is one of: `INDEX`, `INPUTS`, `LOG`, `OUTPUTS`, `ZIP`.
+Returns raw pre-signed S3 `PUT` URLs for more control over uploads.
 
-#### `api.get_upload_urls(report_id, file_paths, file_type=None) -> list[dict]`
-
-Returns raw pre-signed S3 `PUT` URLs. Use this when you need more control over
-the upload (e.g. chunked upload, non-default headers).
-
-#### `api.get_download_urls(report_id, file_types=None) -> list[dict]`
+#### `get_download_urls(...)` / `getDownloadUrls(...)`
 
 Returns pre-signed S3 `GET` URLs for a report's files.
 
-#### `api.download_file(url, local_path, force=False) -> bool`
+#### `download_file(...)` / `downloadFile(...)`
 
-Downloads from a pre-signed URL to a local path. Skips if the file already
-exists unless `force=True`.
+Downloads from a pre-signed URL to a local path. Skips if file already exists
+unless `force=True` / `force: true`.
 
 ---
 
@@ -472,31 +597,31 @@ exists unless `force=True`.
 
 ### `RSReport` attributes
 
-| Attribute | Type | Description |
-|---|---|---|
-| `id` | `str` | UUID |
-| `name` | `str` | Human-readable name |
-| `description` | `str \| None` | Optional description |
-| `status` | `str` | See [Status Values](#report-status-values) |
-| `status_message` | `str \| None` | Human-readable status detail |
-| `progress` | `int` | 0–100 percentage |
-| `parameters` | `dict \| None` | Input parameters |
-| `outputs` | `list` | Output file metadata |
-| `extent` | `dict \| None` | GeoJSON geometry of the report area |
-| `centroid` | `dict \| None` | GeoJSON point centroid |
-| `created_at` | `datetime \| None` | Creation timestamp |
-| `updated_at` | `datetime \| None` | Last-updated timestamp |
-| `report_type` | `RSReportType \| None` | Embedded report type info |
-| `created_by_id` | `str \| None` | Owner user ID |
-| `created_by_name` | `str \| None` | Owner display name |
+| Python Attribute | TypeScript Property | Type | Description |
+|---|---|---|---|
+| `id` | `id` | `str` / `string` | UUID |
+| `name` | `name` | `str` / `string` | Human-readable name |
+| `description` | `description` | `str \| None` / `string \| undefined` | Optional description |
+| `status` | `status` | `str` / `string` | See [Status Values](#report-status-values) |
+| `status_message` | `statusMessage` | `str \| None` / `string \| undefined` | Status detail |
+| `progress` | `progress` | `int` / `number` | 0–100 percentage |
+| `parameters` | `parameters` | `dict` / `Record` | Input parameters |
+| `outputs` | `outputs` | `list` / `unknown[]` | Output file metadata |
+| `extent` | `extent` | `dict` / `Record` | GeoJSON geometry |
+| `centroid` | `centroid` | `dict` / `Record` | GeoJSON point |
+| `created_at` | `createdAt` | `datetime` / `Date` | Creation timestamp |
+| `updated_at` | `updatedAt` | `datetime` / `Date` | Last-updated timestamp |
+| `report_type` | `reportType` | `RSReportType` | Embedded report type info |
+| `created_by_id` | `createdById` | `str` / `string` | Owner user ID |
+| `created_by_name` | `createdByName` | `str` / `string` | Owner display name |
 
-Helper methods: `is_complete()`, `is_running()`, `is_failed()`
+Helper methods: `is_complete()` / `isComplete()`, `is_running()` / `isRunning()`, `is_failed()` / `isFailed()`
 
 ---
 
 ## Writing Your Own Script
 
-Here is a minimal end-to-end example you can adapt:
+### Python
 
 ```python
 import os
@@ -520,25 +645,64 @@ with ReportsAPI(stage='production') as api:
 
     # 4. Start it
     report = api.start_report(report.id)
-    print(f"Started: {report.id} ({report.status})")
 
     # 5. Wait for completion
     report = api.poll_report(report.id, interval=10)
 
     if report.is_complete():
         print("Report complete!")
-        # 6. Download the outputs
         for item in api.get_download_urls(report.id, file_types=['OUTPUTS']):
             api.download_file(item['url'], f"/tmp/{item['filePath']}")
     else:
         print(f"Report failed: {report.status_message}")
 ```
 
+### TypeScript
+
+```typescript
+import { ReportsAPI } from 'rs-reports'
+
+const api = new ReportsAPI({ stage: 'production' })
+await api.open()
+
+try {
+  // 1. Pick a report type
+  const reportTypes = await api.listReportTypes()
+  const rt = reportTypes.find((r) => r.shortName === 'watershed-summary')!
+
+  // 2. Create the report
+  let report = await api.createReport({
+    name: 'My Test Report',
+    reportTypeId: rt.id!,
+    parameters: { units: 'imperial' },
+  })
+
+  // 3. Attach a picker selection
+  await api.attachPickerOption(report.id!, 'huc', '1302020710')
+
+  // 4. Start it
+  report = await api.startReport(report.id!)
+
+  // 5. Wait for completion
+  report = await api.pollReport(report.id!, 10)
+
+  if (report.isComplete()) {
+    console.log('Report complete!')
+    const urls = await api.getDownloadUrls(report.id!, ['OUTPUTS'])
+    for (const item of urls) {
+      await api.downloadFile(item.url, `/tmp/${(item as any).filePath}`)
+    }
+  } else {
+    console.log(`Report failed: ${report.statusMessage}`)
+  }
+} finally {
+  api.close()
+}
+```
+
 ### Calling a custom GraphQL query
 
-If you need data that isn't exposed by a `ReportsAPI` method, you can call
-`run_query()` directly with any GraphQL string:
-
+**Python:**
 ```python
 with ReportsAPI(stage='production') as api:
     result = api.run_query(
@@ -547,13 +711,26 @@ with ReportsAPI(stage='production') as api:
           report(reportId: $reportId) {
             id
             status
-            outputs { filePath url }
           }
         }
         """,
         variables={'reportId': 'YOUR-REPORT-UUID'},
     )
     print(result['data']['report'])
+```
+
+**TypeScript:**
+```typescript
+const result = await api.runQuery(
+  `query MyCustomQuery($reportId: ID!) {
+    report(reportId: $reportId) {
+      id
+      status
+    }
+  }`,
+  { reportId: 'YOUR-REPORT-UUID' }
+)
+console.log((result as any).data.report)
 ```
 
 ---
@@ -567,7 +744,10 @@ to switch to the alternate port:
 
 ```bash
 export RSAPI_ALTPORT=1
-python scripts/create_report.py staging
+# Python
+cd python && python scripts/create_report.py staging
+# TypeScript
+cd typescript && npx tsx scripts/createReport.ts staging
 ```
 
 ### `ReportsAPIException: You must be authenticated`
@@ -575,17 +755,21 @@ python scripts/create_report.py staging
 Your token expired and the library failed to refresh it. Try running the
 script again — a fresh browser login will be triggered automatically.
 
-### `ModuleNotFoundError: No module named 'pyreports'`
+### Python: `ModuleNotFoundError: No module named 'pyreports'`
 
-The package is not installed in the active Python environment. Run:
+The package is not installed in the active Python environment. From `python/` run:
 
 ```bash
 uv sync
 ```
 
-Then check you are using the correct interpreter (the one in `.venv/`).
+Then check you are using the correct interpreter (the one in `python/.venv/`).
 You can also prefix any command with `uv run` and uv will use the project
 environment automatically without needing to activate it first.
+
+### TypeScript: `Cannot find module`
+
+Make sure you've run `npm install` and `npm run build` in the `typescript/` directory.
 
 ### GraphQL errors in the response
 
@@ -594,8 +778,7 @@ message. The most useful fields are `message` and `extensions.code`.
 
 ### Debugging raw HTTP traffic
 
-Set the `logging` level to `DEBUG` before creating the `ReportsAPI` instance:
-
+**Python:**
 ```python
 import logging
 logging.basicConfig(level=logging.DEBUG)
@@ -603,3 +786,6 @@ logging.basicConfig(level=logging.DEBUG)
 
 This will print every HTTP request/response including headers (but not the
 bearer token value) to stderr.
+
+**TypeScript:**
+Add console logging to your script or use the `NODE_DEBUG=http` environment variable.

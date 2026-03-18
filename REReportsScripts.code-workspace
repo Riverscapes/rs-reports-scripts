@@ -1,20 +1,44 @@
 {
   "folders": [
     {
+      "name": "🐍 Python",
+      "path": "python"
+    },
+    {
+      "name": "🟦 TypeScript",
+      "path": "typescript"
+    }
+    {
       "name": "📦 pyreports",
       "path": "."
     }
   ],
   "settings": {
+    "window.title": "${activeEditorShort}${separator}${rootName}${separator}${profileName}",
+    "workbench.colorCustomizations": {
+      "titleBar.activeBackground": "#fc30ff",
+      "titleBar.activeForeground": "#ffffff",
+      "editor.background": "#1e1e1e"
+    },
     "terminal.integrated.defaultProfile.linux": "zsh",
     "[python]": {
       "editor.tabSize": 4,
+      "editor.formatOnSave": true
+    },
+    "[typescript]": {
+      "editor.tabSize": 2,
       "editor.formatOnSave": true,
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
+    },
+    "[javascript]": {
+      "editor.tabSize": 2,
+      "editor.formatOnSave": true,
+      "editor.defaultFormatter": "esbenp.prettier-vscode"
     },
     "autopep8.args": [
-      "--max-line-length=240",
+      "--max-line-length=240"
     ],
-    "python.defaultInterpreterPath": "${workspaceFolder:📦 pyreports}/.venv/bin/python",
+    "python.defaultInterpreterPath": "${workspaceFolder:📦 pyreports}/python/.venv/bin/python",
     "pylint.importStrategy": "fromEnvironment",
     "pylint.args": [
       "--disable=C0301,C0114,C0103,W0719,W0718",
@@ -29,13 +53,17 @@
       "**/docs/**": true,
       "**/*.pytest_cache/**": true,
       "**/.venv/**": true,
-      "**/__pycache__/**": true
+      "**/__pycache__/**": true,
+      "**/node_modules/**": true,
+      "**/dist/**": true
     },
     "search.exclude": {
       "**/*.egg-info/**": true,
       "**/*.pytest_cache/**": true,
       "**/.venv/**": true,
-      "**/__pycache__/**": true
+      "**/__pycache__/**": true,
+      "**/node_modules/**": true,
+      "**/dist/**": true
     },
     "files.exclude": {
       "**/*.egg-info/**": true,

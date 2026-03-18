@@ -1,0 +1,7 @@
+query uploadUrls($reportId: ID!, $filePaths: [String!]!, $fileType: FileTypeEnum) {
+  uploadUrls(reportId: $reportId, filePaths: $filePaths, fileType: $fileType) {
+    fileType
+    url
+    fields
+  }
+}

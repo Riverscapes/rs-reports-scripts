@@ -1,0 +1,33 @@
+query listReports($limit: Int!, $offset: Int!) {
+  profile {
+    id
+    name
+    reports(limit: $limit, offset: $offset) {
+      total
+      limit
+      offset
+      items {
+        id
+        name
+        description
+        status
+        statusMessage
+        progress
+        outputs
+        parameters
+        createdAt
+        updatedAt
+        createdBy {
+          id
+          name
+        }
+        reportType {
+          id
+          name
+          shortName
+          version
+        }
+      }
+    }
+  }
+}

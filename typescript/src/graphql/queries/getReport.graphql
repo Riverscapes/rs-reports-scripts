@@ -1,0 +1,26 @@
+query getReport($reportId: ID!) {
+  report(reportId: $reportId) {
+    id
+    name
+    description
+    status
+    statusMessage
+    progress
+    outputs
+    parameters
+    extent
+    centroid
+    createdAt
+    updatedAt
+    createdBy {
+      id
+      name
+    }
+    reportType {
+      id
+      name
+      shortName
+      version
+    }
+  }
+}

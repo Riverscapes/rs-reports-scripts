@@ -1,0 +1,10 @@
+mutation stopReport($reportId: ID!) {
+  stopReport(reportId: $reportId) {
+    id
+    name
+    status
+    statusMessage
+    progress
+    updatedAt
+  }
+}

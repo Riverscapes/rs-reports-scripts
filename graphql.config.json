@@ -1,8 +1,10 @@
 {
   "$schema": "https://unpkg.com/graphql-config@3.3.0/config-schema.json",
-  "schema": "./pyreports/graphql/rs-reports.schema.graphql",
+  "schema": "./python/pyreports/graphql/rs-reports.schema.graphql",
   "documents": [
-    "./pyreports/graphql/queries/**/*.graphql",
-    "./pyreports/graphql/mutations/**/*.graphql"
+    "./python/pyreports/graphql/queries/**/*.graphql",
+    "./python/pyreports/graphql/mutations/**/*.graphql",
+    "./typescript/src/graphql/queries/**/*.graphql",
+    "./typescript/src/graphql/mutations/**/*.graphql"
   ]
 }

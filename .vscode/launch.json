@@ -29,9 +29,10 @@
       "request": "launch",
       "program": "${file}",
       "args": ["${input:environment}"],
+      "cwd": "${workspaceFolder:📦 pyreports}/python",
       "env": {
         "ENVIRONMENT": "${input:environment}",
-        "PYTHONPATH": "${workspaceFolder}"
+        "PYTHONPATH": "${workspaceFolder:📦 pyreports}/python"
       },
       "console": "integratedTerminal",
     },
@@ -40,15 +41,39 @@
       "type": "debugpy",
       "request": "launch",
       "program": "${file}",
-      "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env",
+      "cwd": "${workspaceFolder:📦 pyreports}/python",
+      "envFile": "${workspaceFolder:📦 pyreports}/.env",
       "args": ["${input:environment}"],
       "env": {
         "ENVIRONMENT": "${input:environment}",
-        "PYTHONPATH": "${workspaceFolder}"
+        "PYTHONPATH": "${workspaceFolder:📦 pyreports}/python"
       },
       "console": "integratedTerminal",
       "justMyCode": true
+    },
+    {
+      "name": "🟦 TypeScript: Create Report",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "${workspaceFolder:📦 pyreports}/typescript/node_modules/.bin/tsx",
+      "args": [
+        "${workspaceFolder:📦 pyreports}/typescript/scripts/createReport.ts",
+        "${input:environment}"
+      ],
+      "cwd": "${workspaceFolder:📦 pyreports}/typescript",
+      "console": "integratedTerminal",
+    },
+    {
+      "name": "🟦 TypeScript: Run Current File",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "${workspaceFolder:📦 pyreports}/typescript/node_modules/.bin/tsx",
+      "args": [
+        "${file}",
+        "${input:environment}"
+      ],
+      "cwd": "${workspaceFolder:📦 pyreports}/typescript",
+      "console": "integratedTerminal",
     },
  ]
 }

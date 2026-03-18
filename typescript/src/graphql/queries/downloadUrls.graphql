@@ -1,0 +1,7 @@
+query downloadUrls($reportId: ID!, $fileTypes: [FileTypeEnum!]) {
+  downloadUrls(reportId: $reportId, fileTypes: $fileTypes) {
+    fileType
+    url
+    fields
+  }
+}

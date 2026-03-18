@@ -1,0 +1,11 @@
+query getReportType($id: ID!) {
+  reportType(id: $id) {
+    id
+    name
+    shortName
+    description
+    subHeader
+    version
+    parameters
+  }
+}

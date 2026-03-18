@@ -1,8 +1,0 @@
-mutation deleteReport($reportId: ID!) {
-  deleteReport(reportId: $reportId) {
-    id
-    name
-    status
-    updatedAt
-  }
-}
