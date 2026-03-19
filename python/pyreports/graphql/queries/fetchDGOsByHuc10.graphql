@@ -1,0 +1,15 @@
+query fetchDGOsByHuc10($huc10: String!) {
+  fetchDGOsByHuc10(huc10: $huc10, limit: 999, offset: 0) {
+    dgos {
+      id
+      levelPath
+      segmentDistance
+      geometry
+      geometrySimplified
+      metrics
+    }
+    offset
+    count
+    total
+  }
+}

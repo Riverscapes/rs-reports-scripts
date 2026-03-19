@@ -1,0 +1,20 @@
+query fetchDGOsByLevelPathEnd(
+  $startLevelPath: String!
+  $huc10: String!
+  $startSegmentDistance: Float!
+  $endSegmentationDistance: Float!
+) {
+  fetchDGOsByLevelPath(
+    startLevelPath: $startLevelPath
+    huc10: $huc10
+    startSegmentDistance: $startSegmentDistance
+    endSegmentationDistance: $endSegmentationDistance
+  ) {
+    id
+    levelPath
+    segmentDistance
+    geometry
+    geometrySimplified
+    metrics
+  }
+}

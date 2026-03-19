@@ -52,6 +52,7 @@ import requests
 from rsxml import Logger, ProgressBar
 
 from pyreports.classes.reports_helpers import RSReport, RSReportType
+from pyreports.classes.Spinner import Spinner
 
 logging.getLogger("urllib3").setLevel(logging.WARNING)
 logging.getLogger("urllib3").propagate = False
@@ -378,7 +379,8 @@ class ReportsAPI:
         headers = {"authorization": "Bearer " + self.access_token} if self.access_token else {}
         if self.dev_headers:
             headers.update(self.dev_headers)
-        request = requests.post(self.uri, json={'query': query, 'variables': variables}, headers=headers, timeout=30)
+        with Spinner("Running query"):
+            request = requests.post(self.uri, json={'query': query, 'variables': variables}, headers=headers, timeout=30)
         if request.status_code == 200:
             resp_json = request.json()
             if 'errors' in resp_json and len(resp_json['errors']) > 0:
