@@ -24,6 +24,7 @@ import * as http from 'node:http'
 import * as crypto from 'node:crypto'
 import { URL, URLSearchParams } from 'node:url'
 import { RSReport, RSReportType, type RSReportJson, type RSReportTypeJson } from './reportsHelpers.js'
+import { Spinner } from './Spinner.js'
 
 const LOCAL_PORT = 4721
 const ALT_PORT = 4723
@@ -272,11 +273,13 @@ export class ReportsAPI {
     }
     headers['content-type'] = 'application/json'
 
-    const response = await fetch(this.uri, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({ query, variables }),
-    })
+    const response = await Spinner.run('Running query', () =>
+      fetch(this.uri, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ query, variables }),
+      })
+    )
 
     if (response.ok) {
       const respJson = (await response.json()) as {

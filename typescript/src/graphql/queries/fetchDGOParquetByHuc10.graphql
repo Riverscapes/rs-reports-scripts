@@ -1,0 +1,3 @@
+query fetchDGOParquetByHuc10($huc10: String!) {
+  fetchDGOParquetByHuc10(huc10: $huc10)
+}

@@ -1,0 +1,21 @@
+query fetchDGOsByLevelPathDistance(
+  $startLevelPath: String!
+  $huc10: String!
+  $startSegmentDistance: Float!
+  $distance: Float!
+) {
+  fetchDGOsByLevelPath(
+    startLevelPath: $startLevelPath
+    huc10: $huc10
+    startSegmentDistance: $startSegmentDistance
+    distance: $distance
+    direction: DOWNSTREAM
+  ) {
+    id
+    levelPath
+    segmentDistance
+    geometry
+    geometrySimplified
+    metrics
+  }
+}

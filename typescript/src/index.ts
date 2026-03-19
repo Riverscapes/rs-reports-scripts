@@ -1,4 +1,5 @@
 export { ReportsAPI, ReportsAPIException } from './ReportsAPI.js'
+export { Spinner } from './Spinner.js'
 export type { ReportsAPIOptions, MachineAuth } from './ReportsAPI.js'
 export { RSReport, RSReportType, formatDate, verifyGuid } from './reportsHelpers.js'
 export type { RSReportJson, RSReportTypeJson } from './reportsHelpers.js'

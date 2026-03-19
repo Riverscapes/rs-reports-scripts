@@ -17,7 +17,9 @@
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "format": "prettier --write 'src/**/*.ts' 'scripts/**/*.ts'",
-    "create-report": "tsx scripts/createReport.ts"
+    "create-report": "tsx scripts/createReport.ts",
+    "fetch-dgos": "tsx scripts/fetchDgos.ts",
+    "update-schema": "tsx scripts/updateSchema.ts"
   },
   "dependencies": {
     "open": "^10.1.0"
@@ -25,6 +27,7 @@
   "devDependencies": {
     "@inquirer/prompts": "^7.0.0",
     "@types/node": "^22.0.0",
+    "graphql": "^16.13.1",
     "prettier": "^3.8.1",
     "tsx": "^4.0.0",
     "typescript": "^5.7.0"

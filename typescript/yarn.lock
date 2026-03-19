@@ -811,6 +811,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"graphql@npm:^16.13.1":
+  version: 16.13.1
+  resolution: "graphql@npm:16.13.1"
+  checksum: a70181daca60187d3d7dcdf3dc7d7408fa996b7bf15d5cf2528a9bd7b5ab6a1a412d7f4d4378e8e4e1bb2a1e638d0179f5669fbdf6a3e825b5ef182d10d9abec
+  languageName: node
+  linkType: hard
+
 "http-cache-semantics@npm:^4.1.1":
   version: 4.2.0
   resolution: "http-cache-semantics@npm:4.2.0"
@@ -1126,6 +1133,7 @@ __metadata:
   dependencies:
     "@inquirer/prompts": ^7.0.0
     "@types/node": ^22.0.0
+    graphql: ^16.13.1
     open: ^10.1.0
     prettier: ^3.8.1
     tsx: ^4.0.0

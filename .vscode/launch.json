@@ -54,11 +54,7 @@
       "name": "🟦 TypeScript: Create Report",
       "type": "node",
       "request": "launch",
-      "runtimeExecutable": "${env:NVM_BIN}/node",
-      "runtimeArgs": [
-        "-r",
-        "ts-node/register"
-      ],
+      "runtimeExecutable": "tsx",
       "args": [
         "${workspaceFolder:📦 pyreports}/typescript/scripts/createReport.ts",
         "${input:environment}"
@@ -67,14 +63,33 @@
       "console": "integratedTerminal",
     },
     {
+      "name": "🟦 TypeScript: Fetch DGOs",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "tsx",
+      "args": [
+        "${workspaceFolder:📦 pyreports}/typescript/scripts/fetchDgos.ts",
+        "${input:environment}"
+      ],
+      "cwd": "${workspaceFolder:📦 pyreports}/typescript",
+      "console": "integratedTerminal",
+    },
+    {
+      "name": "⚠️🟦 TypeScript: Update Schema",
+      "type": "node",
+      "request": "launch",
+      "runtimeExecutable": "tsx",
+      "args": [
+        "${workspaceFolder:📦 pyreports}/typescript/scripts/updateSchema.ts"
+      ],
+      "cwd": "${workspaceFolder:📦 pyreports}/typescript",
+      "console": "integratedTerminal",
+    },
+    {
       "name": "🟦 TypeScript: Run Current File",
       "type": "node",
       "request": "launch",
-      "runtimeExecutable": "${env:NVM_BIN}/node",
-      "runtimeArgs": [
-        "-r",
-        "ts-node/register"
-      ],
+      "runtimeExecutable": "tsx",
       "args": [
         "${file}",
         "${input:environment}"

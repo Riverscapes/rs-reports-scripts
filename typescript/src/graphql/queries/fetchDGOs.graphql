@@ -1,0 +1,10 @@
+query fetchDGOs($dgoIds: [ID!]!, $huc10: String!) {
+  fetchDGOs(dgoIds: $dgoIds, huc10: $huc10) {
+    id
+    levelPath
+    segmentDistance
+    geometry
+    geometrySimplified
+    metrics
+  }
+}
