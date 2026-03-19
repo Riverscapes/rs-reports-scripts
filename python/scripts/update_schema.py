@@ -1,4 +1,12 @@
-"""Introspect the Reports GraphQL API and update the local schema file."""
+"""
+YOU DO NOT NEED TO RUN THIS SCRIPT UNLESS THE GRAPHQL API HAS CHANGED
+
+Introspect the Reports GraphQL API and update the local schema file.
+
+1. Under the launch menu select "⚠️🐍 Python: Update Schema"
+2. Commit the changes to the schema file at `pyreports/graphql/rs-reports.schema.graphql`
+
+"""
 
 from pathlib import Path
 

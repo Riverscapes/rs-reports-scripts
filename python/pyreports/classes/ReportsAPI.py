@@ -40,6 +40,7 @@ import base64
 import logging
 from pathlib import Path
 from typing import Dict, List, Generator, Tuple
+from termcolor import colored
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlencode, urlparse, urlunparse
 
@@ -192,7 +193,7 @@ class ReportsAPI:
         force : bool
             Re-fetch the token even if one is already cached.
         """
-        self.log.info(f"Authenticating on Reports API: {self.uri}")
+        self.log.info(colored(f"🔐 Authenticating on Reports API: {self.uri}", 'cyan'))
         if self.token_timeout:
             self.token_timeout.cancel()
         if self.dev_headers and len(self.dev_headers) > 0:
@@ -217,7 +218,7 @@ class ReportsAPI:
                     timeout=30,
                 ).json()
                 self.access_token = result['access_token']
-                self.log.info("SUCCESSFUL Machine Authentication")
+                self.log.info(colored("✅ SUCCESSFUL Machine Authentication", 'green'))
             except Exception as error:
                 raise ReportsAPIException(str(error)) from error
         else:
@@ -258,7 +259,7 @@ class ReportsAPI:
             self.token_timeout = threading.Timer(res["expires_in"] - 20, self.refresh_token)
             self.token_timeout.start()
             self.access_token = res["access_token"]
-            self.log.info("SUCCESSFUL Browser Authentication")
+            self.log.info(colored("✅ SUCCESSFUL Browser Authentication", 'green'))
 
     def _wait_for_auth_code(self) -> str:
         auth_port = self.auth_port
@@ -379,18 +380,18 @@ class ReportsAPI:
         headers = {"authorization": "Bearer " + self.access_token} if self.access_token else {}
         if self.dev_headers:
             headers.update(self.dev_headers)
-        with Spinner("Running query"):
+        with Spinner("Running GraphQL query", complete_message="GraphQL query complete") as spinner:
             request = requests.post(self.uri, json={'query': query, 'variables': variables}, headers=headers, timeout=30)
         if request.status_code == 200:
             resp_json = request.json()
             if 'errors' in resp_json and len(resp_json['errors']) > 0:
                 if any('You must be authenticated' in e['message'] for e in resp_json['errors']):
-                    self.log.debug("Auth expired — refreshing token and retrying...")
+                    self.log.debug("🔄 Auth expired — refreshing token and retrying...")
                     self.refresh_token(force=True)
                     return self.run_query(query, variables)
-                raise ReportsAPIException(f"Query failed: {resp_json['errors']}. Variables: {json.dumps(variables)}")
+                raise ReportsAPIException(f"❌ Query failed: {resp_json['errors']}. Variables: {json.dumps(variables)}")
             return resp_json
-        raise ReportsAPIException(f"HTTP {request.status_code} from API. Variables: {json.dumps(variables)}")
+        raise ReportsAPIException(f"❌ HTTP {request.status_code} from API. Variables: {json.dumps(variables)}")
 
     # -------------------------------------------------------------------------
     # Profile
@@ -547,21 +548,21 @@ class ReportsAPI:
         if not urls:
             raise ReportsAPIException(f"No upload URL returned for: {remote_path}")
         upload_url = urls[0]['url']
-        self.log.info(f"Uploading {local_path} -> {remote_path}")
+        self.log.info(colored(f"📤 Uploading {local_path} -> {remote_path}", 'cyan'))
         max_retries = 3
         for attempt in range(max_retries):
             try:
                 with open(local_path, 'rb') as f:
                     response = requests.put(upload_url, data=f, timeout=120)
                 if response.status_code in (200, 201):
-                    self.log.info(f"  Upload successful: {remote_path}")
+                    self.log.info(colored(f"  ✅ Upload successful: {remote_path}", 'green'))
                     return True
-                self.log.warning(f"  HTTP {response.status_code} on attempt {attempt + 1}: {response.text[:200]}")
+                self.log.warning(colored(f"  ⚠️  HTTP {response.status_code} on attempt {attempt + 1}: {response.text[:200]}", 'yellow'))
             except requests.RequestException as e:
-                self.log.warning(f"  Network error on attempt {attempt + 1}: {e}")
+                self.log.warning(colored(f"  ⚠️  Network error on attempt {attempt + 1}: {e}", 'yellow'))
             if attempt < max_retries - 1:
                 time.sleep(2 ** attempt)
-        raise ReportsAPIException(f"Upload failed for {remote_path} after {max_retries} attempts")
+        raise ReportsAPIException(f"❌ Upload failed for {remote_path} after {max_retries} attempts")
 
     def download_file(self, url: str, local_path: str, force: bool = False) -> bool:
         """Download a file from a pre-signed S3 URL.
@@ -575,7 +576,7 @@ class ReportsAPI:
             self.log.debug(f"  Skipping (already exists): {local_path}")
             return False
         os.makedirs(os.path.dirname(os.path.abspath(local_path)), exist_ok=True)
-        self.log.info(f"  Downloading: {local_path}")
+        self.log.info(colored(f"  📥 Downloading: {local_path}", 'cyan'))
         max_retries = 3
         for attempt in range(max_retries):
             try:
@@ -595,7 +596,7 @@ class ReportsAPI:
                         prg.erase()
                 return True
             except requests.RequestException as e:
-                self.log.warning(f"  Error on attempt {attempt + 1}: {e}")
+                self.log.warning(colored(f"  ⚠️  Error on attempt {attempt + 1}: {e}", 'yellow'))
                 if attempt < max_retries - 1:
                     time.sleep(2 ** attempt)
                 else:
@@ -611,21 +612,27 @@ class ReportsAPI:
             timeout:    Max seconds to wait (default 3600).
         """
         terminal = {'COMPLETE', 'ERROR', 'STOPPED', 'DELETED'}
+        status_icons = {
+            'CREATED': '📝', 'QUEUED': '⏳', 'RUNNING': '🔄',
+            'COMPLETE': '✅', 'ERROR': '❌', 'STOPPED': '🛑', 'DELETED': '🗑️',
+        }
         elapsed = 0
         while elapsed < timeout:
             report = self.get_report(report_id)
-            self.log.info(f"  [{report.status}] {report.progress}% — {report.status_message or ''}")
+            icon = status_icons.get(report.status, '❓')
+            status_color = 'green' if report.status == 'COMPLETE' else 'red' if report.status in ('ERROR', 'STOPPED') else 'cyan'
+            self.log.info(colored(f"  {icon} [{report.status}] {report.progress}% — {report.status_message or ''}", status_color))
             if report.status in terminal:
                 return report
             time.sleep(interval)
             elapsed += interval
-        raise ReportsAPIException(f"Timed out after {timeout}s waiting for report {report_id}")
+        raise ReportsAPIException(f"⏰ Timed out after {timeout}s waiting for report {report_id}")
 
 
 if __name__ == '__main__':
     log = Logger('ReportsAPI')
     with ReportsAPI(stage='staging') as api:
         profile = api.get_profile()
-        log.info(f"Logged in as: {profile['name']}")
+        log.info(colored(f"👤 Logged in as: {profile['name']}", 'green'))
         for rt in api.list_report_types():
-            log.info(f"  {rt.id}: {rt.name} v{rt.version}")
+            log.info(f"  📋 {rt.id}: {rt.name} v{rt.version}")

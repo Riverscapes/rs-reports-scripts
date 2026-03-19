@@ -3,6 +3,10 @@
 This script walks you through every step needed to produce a report, asking
 questions at each stage so you do not need to write any code.
 
+Run this script using the launch menu under "🐍 Python: Run/Debug Current File".  You will
+be prompted to select which API stage to target (staging or production), then you will be 
+guided through the workflow described below.
+
 Workflow
 --------
 1. **Authenticate** \u2014 a browser tab opens for you to log in with your
@@ -68,7 +72,7 @@ def main():
     args = parser.parse_args()
 
     with ReportsAPI(stage=args.stage) as api:
-        log.title(f"Creating report on {args.stage.upper()}")
+        log.title(f"🚀 Creating report on {args.stage.upper()}")
 
         ################## API CALL: List report types and pick one ##################
         report_types = api.list_report_types()
@@ -130,49 +134,49 @@ def main():
             report_type_id=report_type.id,
             parameters=parameters,
         )
-        log.info(colored(f"Report created: {report.id}", 'green'))
-        log.info(f"  Name:   {report.name}")
-        log.info(f"  Status: {report.status}")
-        log.info(f"  Type:   {report.report_type.name if report.report_type else report_type.id}")
+        log.info(colored(f"✅ Report created: {report.id}", 'green'))
+        log.info(f"  📛 Name:   {report.name}")
+        log.info(f"  📊 Status: {report.status}")
+        log.info(f"  📋 Type:   {report.report_type.name if report.report_type else report_type.id}")
 
         # Attach the picker option (if a picker layer was selected)
         if picker_layer and picker_id:
-            log.info(f"Attaching picker option: {layer_label(picker_layer)} = {picker_id}")
+            log.info(f"📎 Attaching picker option: {layer_label(picker_layer)} = {picker_id}")
 
             #################### API CALL: Attach picker option to report ##################
             api.attach_picker_option(report.id, picker_layer, picker_id)
 
-            log.info(colored("Picker option attached.", 'green'))
+            log.info(colored("✅ Picker option attached.", 'green'))
 
         # Start the report
-        log.info("Starting report...")
+        log.info(colored("▶️  Starting report...", 'cyan'))
 
         ##################### API CALL: Start report ##################
         report = api.start_report(report.id)
-        log.info(colored(f"Report started (status: {report.status})", 'cyan'))
+        log.info(colored(f"🔄 Report started (status: {report.status})", 'cyan'))
 
         # Poll every 10 seconds until a terminal state is reached
-        log.info("Polling for completion every 10 seconds...")
+        log.info(colored("⏳ Polling for completion every 10 seconds...", 'cyan'))
 
         ##################### API CALL: Poll report ##################
         report = api.poll_report(report.id, interval=10)
 
         print()
         if report.is_complete():
-            log.info(colored("Report COMPLETE!", 'green'))
+            log.info(colored("🎉 Report COMPLETE!", 'green'))
             frontend_urls = {
                 'production': 'https://reports.riverscapes.net',
                 'staging': 'https://staging.reports.riverscapes.net',
             }
             base = frontend_urls.get(args.stage)
             if base and report.created_by_id:
-                print(colored(f"  View report: {base}/reports/{report.created_by_id}/{report.id}/report.html", 'green'))
+                print(colored(f"  🔗 View report: {base}/reports/{report.created_by_id}/{report.id}/report.html", 'green'))
             elif base:
-                print(colored(f"  View your reports: {base}/my", 'green'))
+                print(colored(f"  🔗 View your reports: {base}/my", 'green'))
         else:
-            log.error(colored(f"Report ended with status: {report.status}", 'red'))
+            log.error(colored(f"❌ Report ended with status: {report.status}", 'red'))
             if report.status_message:
-                log.error(f"  Message: {report.status_message}")
+                log.error(f"  💬 Message: {report.status_message}")
         print(f"  Report ID: {report.id}")
         print()
 

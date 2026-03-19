@@ -1,10 +1,16 @@
-"""Interactive script to demonstrate DGO-related GraphQL queries."""
+"""
+Run this using the launch menu under  "🐍 Python: Run/Debug Current File"
+
+Interactive script to demonstrate DGO-related GraphQL queries.
+
+"""
 
 import argparse
 import json
 
 import questionary
 from rsxml import Logger
+from termcolor import colored
 from pyreports import ReportsAPI
 
 log = Logger('Fetch DGOs')
@@ -84,12 +90,12 @@ def main():
     entry = QUERIES[choice]
     variables = prompt_variables(entry["variables"])
 
-    log.title(f"Running: {choice}")
-    log.info(f"Variables: {json.dumps(variables, indent=2)}")
+    log.title(f"🔍 Running: {choice}")
+    log.info(colored(f"📋 Variables: {json.dumps(variables, indent=2)}", 'cyan'))
 
     with ReportsAPI(stage=args.stage) as api:
         query = api.load_query(entry["queryFile"])
-        log.info(f"Executing query from {entry['queryFile']}.graphql ...")
+        log.info(colored(f"⚡ Executing query from {entry['queryFile']}.graphql ...", 'cyan'))
         result = api.run_query(query, variables)
         print(json.dumps(result, indent=2))
 
